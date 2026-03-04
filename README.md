@@ -6,8 +6,8 @@
 
 This repository contains two n8n workflow exports:
 
-- `Lead Follow-up System (Corrected).json`
 - `Weekly CRM Report.json`
+- `Lead Follow-up System (Corrected).json`
 
 ## 1) Weekly CRM Report
 
@@ -102,8 +102,3 @@ Based on your earlier JSON, these are the important fixes in the corrected expor
 3. Select a `.json` file from this repository.
 4. Review node credentials, endpoint URLs, and field mappings.
 5. Save and activate.
-
-
-
-
-
