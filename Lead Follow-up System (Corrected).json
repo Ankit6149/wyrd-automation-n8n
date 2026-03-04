@@ -1,0 +1,341 @@
+{
+  "name": "Lead Follow-up System (Corrected)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "options": {}
+      },
+      "id": "75b4f6f9-c475-41b8-bf6b-fa700af87223",
+      "name": "Receive Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        176
+      ],
+      "webhookId": "d1a36c1b-8a30-46ce-a2d0-3f58525a611c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst source = (body.source || 'direct').trim();\nconst email  = body.email;\nconst name   = body.name   || 'there';\nconst message = body.message || '';\n\nlet leadType;\nif (['google_ads', 'facebook_ads', 'instagram_ads'].includes(source)) {\n  leadType = 'Paid';\n} else {\n  leadType = 'Organic';\n}\n\nconst leadScore = message.length > 100 ? 'hot' : message.length > 30 ? 'warm' : 'cold';\n\nreturn [{\n  json: {\n    email,\n    name,\n    message,\n    source,\n    leadType,\n    leadScore,\n    receivedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "c455cdfa-76f8-47cf-a2d0-2db878a98f8b",
+      "name": "Parse & Classify Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.leadType }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "Organic"
+            },
+            {
+              "value2": "Paid",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "id": "bfc13149-fde9-43ec-b079-205e256ec5e9",
+      "name": "Route by Lead Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "Thanks for reaching out!"
+            },
+            {
+              "name": "body",
+              "value": "=Hi {{ $json.name }}, we received your message and will be in touch shortly."
+            },
+            {
+              "name": "type",
+              "value": "organic_welcome"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c30eb376-77a8-4a90-b4c5-378f70d44cd0",
+      "name": "Send Welcome — Organic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "We got your request — talk soon!"
+            },
+            {
+              "name": "body",
+              "value": "=Hi {{ $json.name }}, thanks for your interest. Our team will reach out within 24 hours."
+            },
+            {
+              "name": "type",
+              "value": "paid_welcome"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5916eb0-3fec-421f-b5ca-ad468a3de5bb",
+      "name": "Send Welcome — Paid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "lead_received"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.source }}"
+            },
+            {
+              "name": "type",
+              "value": "={{ $json.leadType }}"
+            },
+            {
+              "name": "score",
+              "value": "={{ $json.leadScore }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b445d3c3-8be4-41d6-abde-6e4ca841c81f",
+      "name": "Log to CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst followUpTime = new Date(Date.now() + (24 * 60)).toISOString();\n\nreturn [{\n  json: {\n    ...item,\n    followUpTime,\n    followUpSubject: 'Just checking in 👋',\n    followUpBody: `Hi ${item.name}, just wanted to follow up on your enquiry. Let us know if you have any questions — we'd love to help.`\n  }\n}];"
+      },
+      "id": "f12b4175-0ec4-4c2e-930d-0627981cfd05",
+      "name": "Prepare Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 24
+      },
+      "id": "4550656e-a519-47c3-926d-1a5c183671ba",
+      "name": "Wait 24h",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        448,
+        144
+      ],
+      "webhookId": "wait-followup-001"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.followUpSubject }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.followUpBody }}"
+            },
+            {
+              "name": "type",
+              "value": "follow_up"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d531044-dcb0-470c-ae57-81bf1f55d896",
+      "name": "Send Follow-up Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        672,
+        144
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Lead": {
+      "main": [
+        [
+          {
+            "node": "Parse & Classify Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Classify Lead": {
+      "main": [
+        [
+          {
+            "node": "Route by Lead Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Lead Type": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome — Organic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Welcome — Paid",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome — Organic": {
+      "main": [
+        [
+          {
+            "node": "Prepare Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Wait 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24h": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome — Paid": {
+      "main": [
+        [
+          {
+            "node": "Prepare Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a91375e2-8f0c-4f5a-a14a-5a2a81f44adb",
+  "meta": {
+    "instanceId": "9c8fa7da5e79f0f1ec5679971cc9bbb85e64be19d52646d46d1a91ba8ea38473"
+  },
+  "id": "CWmzAHGyjwyuJs08",
+  "tags": []
+}

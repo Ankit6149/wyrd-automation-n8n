@@ -1,0 +1,428 @@
+{
+  "name": "Weekly CRM Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -544,
+        288
+      ],
+      "id": "f278421a-2a78-4753-9f37-3dbc34226e21",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\n\n// Get Monday of this week\nconst day = now.getDay(); // 0=Sun, 1=Mon...\nconst diff = now.getDate() - day + (day === 0 ? -6 : 1);\n\nconst monday = new Date(now.setDate(diff));\nmonday.setHours(0,0,0,0);\n\nreturn [{\n  json: {\n    startOfWeek: monday.toISOString(),\n    endOfWeek: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        288
+      ],
+      "id": "5bc55412-fccc-4264-91e4-2438aa4b1fbf",
+      "name": "Compute Week Range"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        256
+      ],
+      "id": "50ba0771-6bfc-46a9-9bbc-9b900d7ac6d2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "sendTo": "ankitbhardwaj80100@gmail.com",
+        "subject": "Weekly CRM Summary",
+        "message": "={{ $json.report }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        288
+      ],
+      "id": "b8fda932-1b59-43ad-9909-0a8c59ea6674",
+      "name": "Send a message",
+      "webhookId": "e1324806-a366-42f2-a435-8727bc0063b7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IOkpVVBASAc34qp6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=createdAfter",
+              "value": "={{ $json.startOfWeek }}"
+            },
+            {
+              "name": "createdBefore",
+              "value": "={{ $json.endOfWeek }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "106cb907-0c43-4d67-a7f2-ec6735497c53",
+      "name": "Fetch Leads",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=updatedAfter",
+              "value": "={{ $json.startOfWeek }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        192
+      ],
+      "id": "34451fc3-8557-4f0b-85db-ef1af633a54c",
+      "name": "Fetch Deals",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        384
+      ],
+      "id": "deeceebb-2925-4a3b-b2f4-1052ad2468db",
+      "name": "Fetch Tasks",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "email"
+            },
+            {
+              "name": "type",
+              "value": "proposal"
+            },
+            {
+              "name": "type",
+              "value": "invoice"
+            },
+            {
+              "name": "createdAfter",
+              "value": "={{ $json.startOfWeek }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        576
+      ],
+      "id": "08fe0eb6-2a3e-4223-a851-837975993f9a",
+      "name": "Fetch Activites",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const start = new Date($node[\"Compute Week Range\"].json.startOfWeek);\n\nreturn items.filter(item => {\n  const created =\n    item.json.createdAt ||\n    item.json.created_at ||\n    item.json.date;\n\n  if (!created) return false;\n\n  const createdDate = new Date(created);\n  if (isNaN(createdDate)) return false;\n\n  return createdDate >= start;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b307d287-8a20-46c3-90e7-7104db7df5f3",
+      "name": "Manual Filtering Leads"
+    },
+    {
+      "parameters": {
+        "jsCode": "const start = new Date($node[\"Compute Week Range\"].json.startOfWeek);\n\nreturn items.filter(item => {\n  const updated =\n    item.json.updatedAt ||\n    item.json.updated_at;\n\n  if (!updated) return false;\n\n  const updatedDate = new Date(updated);\n  if (isNaN(updatedDate)) return false;\n\n  return updatedDate >= start;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        192
+      ],
+      "id": "663a274b-e7b3-423f-a580-5fc1a539a409",
+      "name": "Manual Filtering Deals"
+    },
+    {
+      "parameters": {
+        "jsCode": "const start = new Date($node[\"Compute Week Range\"].json.startOfWeek);\n\nreturn items.filter(item => {\n  const updated =\n    item.json.updatedAt ||\n    item.json.updated_at;\n\n  if (!updated) return false;\n\n  const updatedDate = new Date(updated);\n  if (isNaN(updatedDate)) return false;\n\n  return updatedDate >= start;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        384
+      ],
+      "id": "7a816b0e-deae-40fb-93bc-a7a492fa4a12",
+      "name": "Manual Filtering Tasks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const start = new Date($node[\"Compute Week Range\"].json.startOfWeek);\n\nreturn items.filter(item => {\n  const date =\n    item.json.createdAt ||\n    item.json.date;\n\n  if (!date) return false;\n\n  const parsed = new Date(date);\n  if (isNaN(parsed)) return false;\n\n  return parsed >= start;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        576
+      ],
+      "id": "3d755de9-fad1-4927-84d3-67a988f3677e",
+      "name": "Manual Filtering Activities"
+    },
+    {
+      "parameters": {
+        "jsCode": "const start = new Date($node[\"Compute Week Range\"].json.startOfWeek);\n\nlet summary = {\n  newLeads: [],\n  dealsMoved: [],\n  completedTasks: [],\n  activities: []\n};\n\nfor (const item of items) {\n  const data = item.json;\n  const type = data.type;\n\n  const dateField =\n    data.createdAt ||\n    data.created_at ||\n    data.updatedAt ||\n    data.updated_at ||\n    data.date;\n\n  if (!dateField) continue;\n\n  const parsedDate = new Date(dateField);\n  if (isNaN(parsedDate)) continue;\n  if (parsedDate < start) continue;\n\n  if (type === \"lead\") {\n    summary.newLeads.push(data);\n  }\n\n  if (type === \"deal\") {\n    summary.dealsMoved.push(data);\n  }\n\n  if (type === \"task\" && data.status === \"completed\") {\n    summary.completedTasks.push(data);\n  }\n\n  if (type === \"activity\") {\n    summary.activities.push(data);\n  }\n}\n\n// ADD COUNTS\nsummary.counts = {\n  leads: summary.newLeads.length,\n  deals: summary.dealsMoved.length,\n  tasks: summary.completedTasks.length,\n  activities: summary.activities.length\n};\n\nreturn [{ json: summary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        288
+      ],
+      "id": "db5b63ea-cc2d-4b07-8759-6f167926659d",
+      "name": "Process Weekly Summary"
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = items[0].json;\n\nlet report = `\nWEEKLY CRM SUMMARY\n\nNew Leads: ${summary.counts.leads}\nDeals Moved: ${summary.counts.deals}\nTasks Completed: ${summary.counts.tasks}\nActivities Logged: ${summary.counts.activities}\n\n--------------------------\n\nLEADS:\n${summary.newLeads.map(l => `- ${l.name || l.email}`).join(\"\\n\")}\n\n--------------------------\n\nDEALS:\n${summary.dealsMoved.map(d => `- ${d.title || d.name}`).join(\"\\n\")}\n\n--------------------------\n\nTASKS COMPLETED:\n${summary.completedTasks.map(t => `- ${t.title}`).join(\"\\n\")}\n\n--------------------------\n\nACTIVITIES:\n${summary.activities.map(a => `- ${a.type || a.description}`).join(\"\\n\")}\n`;\n\nreturn [{ json: { report } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        288
+      ],
+      "id": "173a6207-480e-4600-a33e-e5171efda676",
+      "name": "Format  Weekly Report"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Compute Week Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Week Range": {
+      "main": [
+        [
+          {
+            "node": "Fetch Deals",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Leads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Activites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Process Weekly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Leads": {
+      "main": [
+        [
+          {
+            "node": "Manual Filtering Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Deals": {
+      "main": [
+        [
+          {
+            "node": "Manual Filtering Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tasks": {
+      "main": [
+        [
+          {
+            "node": "Manual Filtering Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Activites": {
+      "main": [
+        [
+          {
+            "node": "Manual Filtering Activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Filtering Leads": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Filtering Deals": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Manual Filtering Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Manual Filtering Activities": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Process Weekly Summary": {
+      "main": [
+        [
+          {
+            "node": "Format  Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format  Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "36fdb539-54be-4ef4-8466-64e127a918d8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9c8fa7da5e79f0f1ec5679971cc9bbb85e64be19d52646d46d1a91ba8ea38473"
+  },
+  "id": "Wn7X7d5yNHIirivJ",
+  "tags": []
+}
