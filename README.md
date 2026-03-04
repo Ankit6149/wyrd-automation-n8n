@@ -1,6 +1,8 @@
 # wyrd-automation-n8n
 
-Note: The Loom walkthrough is currently being finalized and will be uploaded as soon as possible.
+## Loom Update
+
+> **Note:** The Loom walkthrough is currently being finalized and will be uploaded as soon as possible.
 
 This repository contains two n8n workflow exports:
 
