@@ -2,7 +2,7 @@
 
 ## Loom Update
 
-> **Note:** The Loom walkthrough is currently being finalized and will be uploaded as soon as possible.
+Loom walkthrough: [Watch on Loom](https://www.loom.com/share/b8eed3c4f6a14c20a74539eeddf0e750)
 
 This repository contains two n8n workflow exports:
 
